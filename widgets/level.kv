@@ -1,10 +1,16 @@
 <Level>:
+    pos_hint: {'center': (.5, .5)}
+    size_hint: None, .8
+    width: self.height
+
     canvas.before:
         Color:
             rgb: .3, .1, .05
         Rectangle:
             pos: self.pos
             size: self.size
+
+<Spawn@Grass>:
 
 <Grass@Tile>:
     canvas.before:

@@ -8,17 +8,19 @@ from kivy.properties import (
 )
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.widget import Widget
+import math
 
 
 class Level(Widget):
     map_size = ListProperty([13, 13])
     map_tiles = DictProperty({
+        's': 'Spawn',
         ' ': 'Grass',
         'o': 'Block',
         'x': 'Rock',
     })
     map_data = ListProperty([
-        ' ', ' ', ' ', 'o', 'o', 'o', 'o', 'o', 'o', 'o', ' ', ' ', ' ',
+        's', ' ', ' ', 'o', 'o', 'o', 'o', 'o', 'o', 'o', ' ', ' ', 's',
         ' ', 'x', 'o', 'x', 'o', 'x', 'o', 'x', 'o', 'x', 'o', 'x', ' ',
         ' ', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', ' ',
         'o', 'x', 'o', 'x', 'o', 'x', 'o', 'x', 'o', 'x', 'o', 'x', 'o',
@@ -30,24 +32,70 @@ class Level(Widget):
         'o', 'x', 'o', 'x', 'o', 'x', 'o', 'x', 'o', 'x', 'o', 'x', 'o',
         ' ', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', 'o', ' ',
         ' ', 'x', 'o', 'x', 'o', 'x', 'o', 'x', 'o', 'x', 'o', 'x', ' ',
-        ' ', ' ', ' ', 'o', 'o', 'o', 'o', 'o', 'o', 'o', ' ', ' ', ' ',
+        's', ' ', ' ', 'o', 'o', 'o', 'o', 'o', 'o', 'o', ' ', ' ', 's',
     ])
     map = ObjectProperty()
+    spawns = ListProperty()
+    players = ListProperty()
 
     def __init__(self, **kwargs):
         super(Level, self).__init__(**kwargs)
         self.init_tiles()
 
     def init_tiles(self):
+        for symbol, tile in self.map_tiles.items():
+            if tile == 'Spawn':
+                break
+        else:
+            raise ValueError('No spawn in map tiles description!')
+        if symbol not in self.map_data:
+            raise ValueError('No spawn in map tiles data!')
+
         self.clear_widgets()
         self.map = grid = GridLayout(
             cols=self.map_size[0],
             rows=self.map_size[1],
         )
-        self.bind(size=grid.setter('size'))
-        for tile in self.map_data:
+        self.bind(
+            pos=grid.setter('pos'),
+            size=grid.setter('size'),
+        )
+
+        for index, tile in enumerate(self.map_data):
+            if self.map_tiles[tile] == 'Spawn':
+                self.spawns.append(index)
             grid.add_widget(tile_manager.tile(self.map_tiles[tile])())
+
         self.add_widget(grid)
+
+    def spawn(self, character):
+        if len(self.spawns) <= len(self.players):
+            raise ValueError('No spawns remaining in map!')
+        character.center = self.map.children[
+            -1 - self.spawns[len(self.players)]
+        ].center
+        self.players.append(character)
+        self.add_widget(character)
+        character.level = self
+
+    def coords(self, x, y):
+        if(
+            x < self.x or y < self.y or
+            x > self.right or y > self.top
+        ):
+            raise ValueError('Invalid position (%d, %d)!' % (x, y))
+        return (
+            int(math.floor((x - self.x) / self.width * self.map_size[0])),
+            int(math.floor((y - self.y) / self.height * self.map_size[1])),
+        )
+
+    def tile_at(self, x, y):
+        if(
+            x < 0 or y < 0 or
+            x > self.map_size[0] or y > self.map_size[1]
+        ):
+            raise ValueError('Invalid coordinates (%d, %d)!' % (x, y))
+        return self.map.children[self.map_size[0] - x - 1 + y * self.map_size[1]]
 
 
 class Tile(Widget):
