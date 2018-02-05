@@ -108,8 +108,7 @@ class Character(Widget):
                 ):
                     self.x = tile.right
                 # Check tile corners
-                # XXX: Bug when hitting the edges of two tiles simultaneously
-                # FIXME: Also, does it really need to be so complicated?
+                # XXX: Does it really need to be so complicated?
                 hypotenuse = (
                     (self.center_x - tile.x) ** 2 +
                     (self.center_y - tile.top) ** 2
@@ -117,7 +116,17 @@ class Character(Widget):
                 if(
                     self.right > tile.x and self.x < tile.x and
                     self.y < tile.top and self.top > tile.top and
-                    hypotenuse < self.radius
+                    hypotenuse < self.radius and not
+                    (
+                        isinstance(
+                            level.tile_at(neighbor[0] - 1, neighbor[1]),
+                            (Factory.Block, Factory.Rock)
+                        ) or
+                        isinstance(
+                            level.tile_at(neighbor[0], neighbor[1] + 1),
+                            (Factory.Block, Factory.Rock)
+                        )
+                    )
                 ):
                     ratio = self.radius / hypotenuse
                     self.center_x = tile.x - abs(self.center_x - tile.x) * ratio
@@ -129,7 +138,17 @@ class Character(Widget):
                 if(
                     self.right > tile.x and self.x < tile.x and
                     self.top > tile.y and self.y < tile.y and
-                    hypotenuse < self.radius
+                    hypotenuse < self.radius and not
+                    (
+                        isinstance(
+                            level.tile_at(neighbor[0] - 1, neighbor[1]),
+                            (Factory.Block, Factory.Rock)
+                        ) or
+                        isinstance(
+                            level.tile_at(neighbor[0], neighbor[1] - 1),
+                            (Factory.Block, Factory.Rock)
+                        )
+                    )
                 ):
                     ratio = self.radius / hypotenuse
                     self.center_x = tile.x - abs(self.center_x - tile.x) * ratio
@@ -141,7 +160,17 @@ class Character(Widget):
                 if(
                     self.x < tile.right and self.right > tile.right and
                     self.top > tile.y and self.y < tile.y and
-                    hypotenuse < self.radius
+                    hypotenuse < self.radius and not
+                    (
+                        isinstance(
+                            level.tile_at(neighbor[0] + 1, neighbor[1]),
+                            (Factory.Block, Factory.Rock)
+                        ) or
+                        isinstance(
+                            level.tile_at(neighbor[0], neighbor[1] - 1),
+                            (Factory.Block, Factory.Rock)
+                        )
+                    )
                 ):
                     ratio = self.radius / hypotenuse
                     self.center_x = tile.right + abs(self.center_x - tile.right) * ratio
@@ -153,7 +182,17 @@ class Character(Widget):
                 if(
                     self.x < tile.right and self.right > tile.right and
                     self.y < tile.top and self.top > tile.top and
-                    hypotenuse < self.radius
+                    hypotenuse < self.radius and not
+                    (
+                        isinstance(
+                            level.tile_at(neighbor[0] + 1, neighbor[1]),
+                            (Factory.Block, Factory.Rock)
+                        ) or
+                        isinstance(
+                            level.tile_at(neighbor[0], neighbor[1] + 1),
+                            (Factory.Block, Factory.Rock)
+                        )
+                    )
                 ):
                     ratio = self.radius / hypotenuse
                     self.center_x = tile.right + abs(self.center_x - tile.right) * ratio
