@@ -4,7 +4,9 @@ from kivy.lang import Builder
 from kivy.properties import (
     DictProperty,
     ListProperty,
+    NumericProperty,
     ObjectProperty,
+    ReferenceListProperty,
 )
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.widget import Widget
@@ -37,6 +39,7 @@ class Level(Widget):
     map = ObjectProperty()
     spawns = ListProperty()
     players = ListProperty()
+    bombs = ListProperty()
 
     def __init__(self, **kwargs):
         super(Level, self).__init__(**kwargs)
@@ -64,7 +67,12 @@ class Level(Widget):
         for index, tile in enumerate(self.map_data):
             if self.map_tiles[tile] == 'Spawn':
                 self.spawns.append(index)
-            grid.add_widget(tile_manager.tile(self.map_tiles[tile])())
+            grid.add_widget(tile_manager.tile(self.map_tiles[tile])(
+                coords=(
+                    index % grid.cols,
+                    grid.rows - 1 - (index // grid.cols),
+                )
+            ))
 
         self.add_widget(grid)
 
@@ -92,13 +100,28 @@ class Level(Widget):
     def tile_at(self, x, y):
         if(
             x < 0 or y < 0 or
-            x > self.map_size[0] or y > self.map_size[1]
+            x >= self.map_size[0] or y >= self.map_size[1]
         ):
             raise ValueError('Invalid coordinates (%d, %d)!' % (x, y))
-        return self.map.children[self.map_size[0] - x - 1 + y * self.map_size[1]]
+        return self.map.children[self.map_size[0] - x - 1 + y * self.map_size[0]]
+
+    def collides(self, tile, character):
+        return (
+            isinstance(tile, (Factory.Block, Factory.Rock)) or
+            any([
+                (
+                    bomb.tile is tile and
+                    character not in bomb.no_collision_characters
+                ) for bomb in self.bombs
+            ])
+        )
 
 
 class Tile(Widget):
+    coord_x = NumericProperty()
+    coord_y = NumericProperty()
+    coords = ReferenceListProperty(coord_x, coord_y)
+
     def __new__(cls, **kwargs):
         tile_manager.register(cls)
         return super(Tile, cls).__new__(cls, **kwargs)

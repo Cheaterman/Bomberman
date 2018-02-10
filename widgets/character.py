@@ -3,12 +3,14 @@ from kivy.core.window import Window
 from kivy.factory import Factory
 from kivy.lang import Builder
 from kivy.properties import (
+    BooleanProperty,
     DictProperty,
     ListProperty,
     NumericProperty,
     ObjectProperty,
 )
 from kivy.uix.widget import Widget
+from widgets import Bomb
 
 
 class Character(Widget):
@@ -17,11 +19,15 @@ class Character(Widget):
         274: '+down',
         275: '+right',
         276: '+left',
+        32: '+bomb',
     })
     current_actions = ListProperty()
     radius = NumericProperty(30)
     movement_speed = NumericProperty(300)
     level = ObjectProperty()
+    bombs = ListProperty()
+    bomb_power = NumericProperty(2)
+    bomb_wall_traversal = BooleanProperty(False)
 
     def __init__(self, **kwargs):
         super(Character, self).__init__(**kwargs)
@@ -43,7 +49,7 @@ class Character(Widget):
                     self.current_actions.remove(action)
 
     def update(self, dt):
-        for action in self.current_actions:
+        for action in self.current_actions[:]:
             if action == 'up':
                 self.y += self.movement_speed * dt
             if action == 'down':
@@ -52,6 +58,18 @@ class Character(Widget):
                 self.x += self.movement_speed * dt
             if action == 'left':
                 self.x -= self.movement_speed * dt
+            if action == 'bomb':
+                self.current_actions.remove('bomb')
+                level = self.level
+                tile = level.tile_at(*level.coords(*self.center))
+                if any([bomb.tile is tile for bomb in level.bombs]):
+                    continue
+                bomb = Bomb(
+                    level=level,
+                    tile=tile,
+                    owner=self,
+                )
+                level.add_widget(bomb)
         self.update_collisions()
 
     def update_collisions(self):
@@ -85,7 +103,7 @@ class Character(Widget):
                 # Outside of map
                 continue
             tile = level.tile_at(*neighbor)
-            if isinstance(tile, (Factory.Block, Factory.Rock)):
+            if level.collides(tile, self):
                 # Check tile edges
                 if(
                     self.y < tile.top and self.top > tile.top and
@@ -118,13 +136,13 @@ class Character(Widget):
                     self.y < tile.top and self.top > tile.top and
                     hypotenuse < self.radius and not
                     (
-                        isinstance(
+                        level.collides(
                             level.tile_at(neighbor[0] - 1, neighbor[1]),
-                            (Factory.Block, Factory.Rock)
+                            self
                         ) or
-                        isinstance(
+                        level.collides(
                             level.tile_at(neighbor[0], neighbor[1] + 1),
-                            (Factory.Block, Factory.Rock)
+                            self
                         )
                     )
                 ):
@@ -140,13 +158,13 @@ class Character(Widget):
                     self.top > tile.y and self.y < tile.y and
                     hypotenuse < self.radius and not
                     (
-                        isinstance(
+                        level.collides(
                             level.tile_at(neighbor[0] - 1, neighbor[1]),
-                            (Factory.Block, Factory.Rock)
+                            self
                         ) or
-                        isinstance(
+                        level.collides(
                             level.tile_at(neighbor[0], neighbor[1] - 1),
-                            (Factory.Block, Factory.Rock)
+                            self
                         )
                     )
                 ):
@@ -162,13 +180,13 @@ class Character(Widget):
                     self.top > tile.y and self.y < tile.y and
                     hypotenuse < self.radius and not
                     (
-                        isinstance(
+                        level.collides(
                             level.tile_at(neighbor[0] + 1, neighbor[1]),
-                            (Factory.Block, Factory.Rock)
+                            self
                         ) or
-                        isinstance(
+                        level.collides(
                             level.tile_at(neighbor[0], neighbor[1] - 1),
-                            (Factory.Block, Factory.Rock)
+                            self
                         )
                     )
                 ):
@@ -184,13 +202,13 @@ class Character(Widget):
                     self.y < tile.top and self.top > tile.top and
                     hypotenuse < self.radius and not
                     (
-                        isinstance(
+                        level.collides(
                             level.tile_at(neighbor[0] + 1, neighbor[1]),
-                            (Factory.Block, Factory.Rock)
+                            self
                         ) or
-                        isinstance(
+                        level.collides(
                             level.tile_at(neighbor[0], neighbor[1] + 1),
-                            (Factory.Block, Factory.Rock)
+                            self
                         )
                     )
                 ):

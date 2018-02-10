@@ -1,2 +1,3 @@
-from character import Character
-from level import Level, Tile
+from widgets.bomb import Bomb
+from widgets.character import Character
+from widgets.level import Level, Tile

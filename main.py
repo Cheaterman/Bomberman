@@ -9,7 +9,7 @@ class Bomberman(App):
 
     def build(self):
         self.level = self.root.ids.level
-        Clock.schedule_once(lambda _: self.start_game(), 1)
+        Clock.schedule_once(lambda _: self.start_game(), 2)
 
     def start_game(self):
         character = Character()
