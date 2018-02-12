@@ -11,6 +11,7 @@ from kivy.properties import (
 )
 from kivy.uix.widget import Widget
 from widgets import Bomb
+import math
 
 
 class Character(Widget):
@@ -85,16 +86,13 @@ class Character(Widget):
         self.right = min(self.right, level.right)
         self.top = min(self.top, level.top)
 
-        for nid, neighbor in enumerate((
-            (coords[0] - 1, coords[1] - 1),
-            (coords[0] + 0, coords[1] - 1),
-            (coords[0] + 1, coords[1] - 1),
-            (coords[0] - 1, coords[1] + 0),
-            (coords[0] + 1, coords[1] + 0),
-            (coords[0] - 1, coords[1] + 1),
-            (coords[0] + 0, coords[1] + 1),
-            (coords[0] + 1, coords[1] + 1),
+        # Evaluate the 8 neighboring tiles
+        for nid, offset in enumerate((
+            (-1, +1), (+0, +1), (+1, +1),
+            (-1, +0),           (+1, +0),
+            (-1, -1), (+0, -1), (+1, -1),
         )):
+            neighbor = [coords[i] + offset[i] for i in range(2)]
             if(
                 neighbor[0] < 0 or neighbor[1] < 0 or
                 neighbor[0] >= level.map_size[0] or
@@ -105,116 +103,51 @@ class Character(Widget):
             tile = level.tile_at(*neighbor)
             if level.collides(tile, self):
                 # Check tile edges
-                if(
-                    self.y < tile.top and self.top > tile.top and
-                    self.center_x >= tile.x and self.center_x <= tile.right
+                for edge_pos, edge_direction, target in (
+                    (tile.top, 'horizontal', 'y'),
+                    (tile.x, 'vertical', 'right'),
+                    (tile.y, 'horizontal', 'top'),
+                    (tile.right, 'vertical', 'x'),
                 ):
-                    self.y = tile.top
-                if(
-                    self.right > tile.x and self.x < tile.x and
-                    self.center_y >= tile.y and self.center_y <= tile.top
-                ):
-                    self.right = tile.x
-                if(
-                    self.top > tile.y and self.y < tile.y and
-                    self.center_x >= tile.x and self.center_x <= tile.right
-                ):
-                    self.top = tile.y
-                if(
-                    self.x < tile.right and self.right > tile.right and
-                    self.center_y >= tile.y and self.center_y <= tile.top
-                ):
-                    self.x = tile.right
+                    min_pos, max_pos, target_ortho, min_ortho, max_ortho = (
+                        self.x, self.right, self.center_y, tile.y, tile.top
+                    ) if edge_direction == 'vertical' else (
+                        self.y, self.top, self.center_x, tile.x, tile.right
+                    )
+                    if(
+                        min_pos < edge_pos < max_pos and
+                        min_ortho <= target_ortho <= max_ortho
+                    ):
+                        setattr(self, target, edge_pos)
                 # Check tile corners
-                # XXX: Does it really need to be so complicated?
-                hypotenuse = (
-                    (self.center_x - tile.x) ** 2 +
-                    (self.center_y - tile.top) ** 2
-                ) ** .5
-                if(
-                    self.right > tile.x and self.x < tile.x and
-                    self.y < tile.top and self.top > tile.top and
-                    hypotenuse < self.radius and not
-                    (
-                        level.collides(
-                            level.tile_at(neighbor[0] - 1, neighbor[1]),
-                            self
-                        ) or
-                        level.collides(
-                            level.tile_at(neighbor[0], neighbor[1] + 1),
-                            self
-                        )
-                    )
+                for corner, neighbors_offset in (
+                    ((tile.x, tile.y), ((-1, 0), (0, -1))),
+                    ((tile.x, tile.top), ((-1, 0), (0, 1))),
+                    ((tile.right, tile.y), ((1, 0), (0, -1))),
+                    ((tile.right, tile.top), ((1, 0), (0, 1))),
                 ):
-                    ratio = self.radius / hypotenuse
-                    self.center_x = tile.x - abs(self.center_x - tile.x) * ratio
-                    self.center_y = tile.top + abs(self.center_y - tile.top) * ratio
-                hypotenuse = (
-                    (self.center_x - tile.x) ** 2 +
-                    (self.center_y - tile.y) ** 2
-                ) ** .5
-                if(
-                    self.right > tile.x and self.x < tile.x and
-                    self.top > tile.y and self.y < tile.y and
-                    hypotenuse < self.radius and not
-                    (
+                    radius = math.hypot(*[
+                        self.center[i] - corner[i] for i in range(2)
+                    ])
+                    if radius < self.radius and all([
+                        self.pos[i] < corner[i] < self.pos[i] + self.size[i]
+                        for i in range(2)
+                    ]) and not any([
                         level.collides(
-                            level.tile_at(neighbor[0] - 1, neighbor[1]),
+                            level.tile_at(*[
+                                neighbor[i] + offset[i]
+                                for i in range(2)
+                            ]),
                             self
-                        ) or
-                        level.collides(
-                            level.tile_at(neighbor[0], neighbor[1] - 1),
-                            self
-                        )
-                    )
-                ):
-                    ratio = self.radius / hypotenuse
-                    self.center_x = tile.x - abs(self.center_x - tile.x) * ratio
-                    self.center_y = tile.y - abs(self.center_y - tile.y) * ratio
-                hypotenuse = (
-                    (self.center_x - tile.right) ** 2 +
-                    (self.center_y - tile.y) ** 2
-                ) ** .5
-                if(
-                    self.x < tile.right and self.right > tile.right and
-                    self.top > tile.y and self.y < tile.y and
-                    hypotenuse < self.radius and not
-                    (
-                        level.collides(
-                            level.tile_at(neighbor[0] + 1, neighbor[1]),
-                            self
-                        ) or
-                        level.collides(
-                            level.tile_at(neighbor[0], neighbor[1] - 1),
-                            self
-                        )
-                    )
-                ):
-                    ratio = self.radius / hypotenuse
-                    self.center_x = tile.right + abs(self.center_x - tile.right) * ratio
-                    self.center_y = tile.y - abs(self.center_y - tile.y) * ratio
-                hypotenuse = (
-                    (self.center_x - tile.right) ** 2 +
-                    (self.center_y - tile.top) ** 2
-                ) ** .5
-                if(
-                    self.x < tile.right and self.right > tile.right and
-                    self.y < tile.top and self.top > tile.top and
-                    hypotenuse < self.radius and not
-                    (
-                        level.collides(
-                            level.tile_at(neighbor[0] + 1, neighbor[1]),
-                            self
-                        ) or
-                        level.collides(
-                            level.tile_at(neighbor[0], neighbor[1] + 1),
-                            self
-                        )
-                    )
-                ):
-                    ratio = self.radius / hypotenuse
-                    self.center_x = tile.right + abs(self.center_x - tile.right) * ratio
-                    self.center_y = tile.top + abs(self.center_y - tile.top) * ratio
+                        ) for offset in neighbors_offset
+                    ]):
+                        ratio = self.radius / radius
+                        self.center = [
+                            corner[i] + sum(
+                                [offset[i] for offset in neighbors_offset]
+                            ) * abs(self.center[i] - corner[i]) * ratio
+                            for i in range(2)
+                        ]
 
 
 Factory.register('Character', module='widgets')
