@@ -102,21 +102,19 @@ class Character(Widget):
                 continue
             tile = level.tile_at(*neighbor)
             if level.collides(tile, self):
+                pos, size, center, tpos, tsize = (
+                    self.pos, self.size, self.center, tile.pos, tile.size
+                )
                 # Check tile edges
-                for edge_pos, edge_direction, target in (
-                    (tile.top, 'horizontal', 'y'),
-                    (tile.x, 'vertical', 'right'),
-                    (tile.y, 'horizontal', 'top'),
-                    (tile.right, 'vertical', 'x'),
+                for edge_pos, axis, target in (
+                    (tile.x, 0, 'right'),
+                    (tile.y, 1, 'top'),
+                    (tile.right, 0, 'x'),
+                    (tile.top, 1, 'y'),
                 ):
-                    min_pos, max_pos, target_ortho, min_ortho, max_ortho = (
-                        self.x, self.right, self.center_y, tile.y, tile.top
-                    ) if edge_direction == 'vertical' else (
-                        self.y, self.top, self.center_x, tile.x, tile.right
-                    )
                     if(
-                        min_pos < edge_pos < max_pos and
-                        min_ortho <= target_ortho <= max_ortho
+                        pos[axis] < edge_pos < pos[axis] + size[axis] and
+                        tpos[axis] <= center[axis] <= tpos[axis] + tsize[axis]
                     ):
                         setattr(self, target, edge_pos)
                 # Check tile corners
@@ -130,16 +128,11 @@ class Character(Widget):
                         self.center[i] - corner[i] for i in range(2)
                     ])
                     if radius < self.radius and all([
-                        self.pos[i] < corner[i] < self.pos[i] + self.size[i]
-                        for i in range(2)
+                        pos[i] < corner[i] < pos[i] + size[i] for i in range(2)
                     ]) and not any([
-                        level.collides(
-                            level.tile_at(*[
-                                neighbor[i] + offset[i]
-                                for i in range(2)
-                            ]),
-                            self
-                        ) for offset in neighbors_offset
+                        level.collides(level.tile_at(
+                            *[neighbor[i] + offset[i] for i in range(2)]
+                        ), self) for offset in neighbors_offset
                     ]):
                         ratio = self.radius / radius
                         self.center = [
