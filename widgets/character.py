@@ -112,9 +112,10 @@ class Character(Widget):
                     (tile.right, 0, 'x'),
                     (tile.top, 1, 'y'),
                 ):
+                    na = not axis
                     if(
                         pos[axis] < edge_pos < pos[axis] + size[axis] and
-                        tpos[axis] <= center[axis] <= tpos[axis] + tsize[axis]
+                        tpos[na] <= center[na] <= tpos[na] + tsize[na]
                     ):
                         setattr(self, target, edge_pos)
                 # Check tile corners
@@ -125,7 +126,7 @@ class Character(Widget):
                     ((tile.right, tile.top), ((1, 0), (0, 1))),
                 ):
                     radius = math.hypot(*[
-                        self.center[i] - corner[i] for i in range(2)
+                        center[i] - corner[i] for i in range(2)
                     ])
                     if radius < self.radius and all([
                         pos[i] < corner[i] < pos[i] + size[i] for i in range(2)
@@ -138,7 +139,7 @@ class Character(Widget):
                         self.center = [
                             corner[i] + sum(
                                 [offset[i] for offset in neighbors_offset]
-                            ) * abs(self.center[i] - corner[i]) * ratio
+                            ) * abs(center[i] - corner[i]) * ratio
                             for i in range(2)
                         ]
 
