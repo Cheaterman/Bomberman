@@ -4,7 +4,7 @@
 
     canvas.before:
         Color:
-            b: .25
-        Ellipse:
+        Rectangle:
             pos: self.pos
             size: self.size
+            texture: self.atlas['%s_%02d' % (self.last_action, self.animation_frame)]

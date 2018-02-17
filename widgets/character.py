@@ -1,3 +1,4 @@
+from kivy.atlas import Atlas
 from kivy.clock import Clock
 from kivy.core.window import Window
 from kivy.factory import Factory
@@ -8,6 +9,7 @@ from kivy.properties import (
     ListProperty,
     NumericProperty,
     ObjectProperty,
+    StringProperty,
 )
 from kivy.uix.widget import Widget
 from widgets import Bomb
@@ -22,8 +24,12 @@ class Character(Widget):
         276: '+left',
         32: '+bomb',
     })
+    last_action = StringProperty('down')
     current_actions = ListProperty()
     radius = NumericProperty(30)
+    atlas = ObjectProperty(Atlas('data/images/character.atlas'))
+    animation_frame = NumericProperty(1)
+    animation_timer = ObjectProperty(allownone=True)
     movement_speed = NumericProperty(300)
     level = ObjectProperty()
     bombs = ListProperty()
@@ -71,7 +77,28 @@ class Character(Widget):
                     owner=self,
                 )
                 level.add_widget(bomb)
+        if self.current_actions:
+            self.last_action = self.current_actions[-1]
+            if not self.animation_timer:
+                self.animation_timer = Clock.schedule_interval(
+                    self.update_animation, .25
+                )
+        else:
+            Clock.unschedule(self.animation_timer)
+            self.animation_timer = None
+            self.animation_frame = 1
         self.update_collisions()
+
+    def update_animation(self, dt):
+        animation_duration = len([
+            key for key in self.atlas.textures
+            if key.startswith(self.last_action)
+            and key.split('_')[1].isdigit()
+        ])
+        if self.animation_frame < animation_duration:
+            self.animation_frame += 1
+        else:
+            self.animation_frame = 1
 
     def update_collisions(self):
         level = self.level
