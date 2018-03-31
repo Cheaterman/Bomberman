@@ -34,8 +34,8 @@ class Character(Widget):
     coords = ReferenceListProperty(coord_x, coord_y)
     scale = NumericProperty(1)
     radius = NumericProperty(45)
-    atlas = ObjectProperty(Atlas('data/images/character.atlas'))
-    animation_frame = NumericProperty(1)
+    atlas = ObjectProperty(Atlas('data/images.atlas'))
+    animation_frame = NumericProperty(0)
     animation_timer = ObjectProperty(allownone=True)
     movement_speed = NumericProperty(450)
     bombs = ListProperty()
@@ -102,17 +102,18 @@ class Character(Widget):
                     tile=tile,
                     owner=self,
                 )
-                level.add_widget(bomb)
+                level.add_widget(bomb, index=1)
         if self.current_actions:
             self.last_action = self.current_actions[-1]
             if not self.animation_timer:
                 self.animation_timer = Clock.schedule_interval(
                     self.update_animation, .25
                 )
+                self.animation_frame = 1
         else:
             Clock.unschedule(self.animation_timer)
             self.animation_timer = None
-            self.animation_frame = 1
+            self.animation_frame = 0
         self.update_collisions()
 
     def update_animation(self, dt):
@@ -121,7 +122,7 @@ class Character(Widget):
             if key.startswith(self.last_action)
             and key.split('_')[1].isdigit()
         ])
-        if self.animation_frame < animation_duration:
+        if self.animation_frame < animation_duration - 1:
             self.animation_frame += 1
         else:
             self.animation_frame = 1

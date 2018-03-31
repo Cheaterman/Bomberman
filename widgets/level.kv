@@ -2,6 +2,7 @@
     pos_hint: {'center': (.5, .5)}
     size_hint: None, .8
     width: self.height
+    players_area: players_area
 
     canvas.before:
         Color:
@@ -9,6 +10,9 @@
         Rectangle:
             pos: self.pos
             size: self.size
+
+    FloatLayout:
+        id: players_area
 
 <Spawn@Grass>:
 

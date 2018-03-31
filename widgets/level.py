@@ -37,6 +37,7 @@ class Level(Widget):
         's', ' ', ' ', 'o', 'o', 'o', 'o', 'o', 'o', 'o', ' ', ' ', 's',
     ])
     map = ObjectProperty()
+    players_area = ObjectProperty()
     spawns = ListProperty()
     players = ListProperty()
     bombs = ListProperty()
@@ -86,7 +87,7 @@ class Level(Widget):
         character.level = self
         character.coords = [xy + .5 for xy in spawn.coords]
         self.players.append(character)
-        self.add_widget(character)
+        self.players_area.add_widget(character)
 
     def on_size(self, level, size):
         # FIXME: Player position?
