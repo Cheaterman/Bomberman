@@ -53,7 +53,10 @@ class Character(Widget):
     def on_level(self, character, level):
         if level:
             tile = level.tile_at(*[int(i) for i in self.coords])
-            tile.bind(size=lambda *_: self.update_coords())
+            tile.bind(
+                pos=lambda *_: self.update_coords(),
+                size=lambda *_: self.update_coords(),
+            )
 
     def on_coords(self, character, coords):
         if not self.level:
