@@ -52,7 +52,8 @@ class Character(Widget):
 
     def on_level(self, character, level):
         if level:
-            level.bind(size=lambda *_: self.update_coords())
+            tile = level.tile_at(*[int(i) for i in self.coords])
+            tile.bind(size=lambda *_: self.update_coords())
 
     def on_coords(self, character, coords):
         if not self.level:
@@ -62,6 +63,7 @@ class Character(Widget):
     def update_coords(self):
         coords = self.coords
         tile = self.level.tile_at(*[int(i) for i in coords])
+        self.scale = min(*tile.size) / 100.
         self.center = (
             tile.x + (coords[0] - int(coords[0])) * tile.width,
             tile.y + (coords[1] - int(coords[1])) * tile.height,
@@ -84,13 +86,13 @@ class Character(Widget):
     def update(self, dt):
         for action in self.current_actions[:]:
             if action == 'up':
-                self.coord_y += self.movement_speed * self.scale * dt / 100.
+                self.coord_y += self.movement_speed * dt / 100.
             if action == 'down':
-                self.coord_y -= self.movement_speed * self.scale * dt / 100.
+                self.coord_y -= self.movement_speed * dt / 100.
             if action == 'right':
-                self.coord_x += self.movement_speed * self.scale * dt / 100.
+                self.coord_x += self.movement_speed * dt / 100.
             if action == 'left':
-                self.coord_x -= self.movement_speed * self.scale * dt / 100.
+                self.coord_x -= self.movement_speed * dt / 100.
             if action == 'bomb':
                 self.current_actions.remove('bomb')
                 level = self.level

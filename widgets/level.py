@@ -89,13 +89,6 @@ class Level(Widget):
         self.players.append(character)
         self.players_area.add_widget(character)
 
-    def on_size(self, level, size):
-        # FIXME: Player position?
-        for player in self.players:
-            player.scale = min(
-                *self.tile_at(*[int(coord) for coord in player.coords]).size
-            ) / 100.
-
     def coords(self, x, y):
         if(
             x < self.x or y < self.y or
