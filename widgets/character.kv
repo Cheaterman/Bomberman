@@ -1,6 +1,6 @@
 <Character>:
     size_hint: None, None
-    size: [self.radius * 2. for wh in 'wh']
+    size: [self.radius * self.scale * 2. for wh in 'wh']
 
     canvas.before:
         Color:

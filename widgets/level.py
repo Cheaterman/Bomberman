@@ -79,12 +79,21 @@ class Level(Widget):
     def spawn(self, character):
         if len(self.spawns) <= len(self.players):
             raise ValueError('No spawns remaining in map!')
-        character.center = self.map.children[
+        spawn = self.map.children[
             -1 - self.spawns[len(self.players)]
-        ].center
+        ]
+        character.scale = min(*spawn.size) / 100.
+        character.level = self
+        character.coords = [xy + .5 for xy in spawn.coords]
         self.players.append(character)
         self.add_widget(character)
-        character.level = self
+
+    def on_size(self, level, size):
+        # FIXME: Player position?
+        for player in self.players:
+            player.scale = min(
+                *self.tile_at(*[int(coord) for coord in player.coords]).size
+            ) / 100.
 
     def coords(self, x, y):
         if(

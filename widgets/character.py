@@ -1,3 +1,4 @@
+from kivy.app import App
 from kivy.atlas import Atlas
 from kivy.clock import Clock
 from kivy.core.window import Window
@@ -9,6 +10,7 @@ from kivy.properties import (
     ListProperty,
     NumericProperty,
     ObjectProperty,
+    ReferenceListProperty,
     StringProperty,
 )
 from kivy.uix.widget import Widget
@@ -22,16 +24,20 @@ class Character(Widget):
         274: '+down',
         275: '+right',
         276: '+left',
-        32: '+bomb',
+        32: 'bomb',
     })
     last_action = StringProperty('down')
     current_actions = ListProperty()
-    radius = NumericProperty(30)
+    level = ObjectProperty()
+    coord_x = NumericProperty()
+    coord_y = NumericProperty()
+    coords = ReferenceListProperty(coord_x, coord_y)
+    scale = NumericProperty(1)
+    radius = NumericProperty(45)
     atlas = ObjectProperty(Atlas('data/images/character.atlas'))
     animation_frame = NumericProperty(1)
     animation_timer = ObjectProperty(allownone=True)
-    movement_speed = NumericProperty(300)
-    level = ObjectProperty()
+    movement_speed = NumericProperty(450)
     bombs = ListProperty()
     bomb_power = NumericProperty(2)
     bomb_wall_traversal = BooleanProperty(False)
@@ -44,27 +50,47 @@ class Character(Widget):
         )
         Clock.schedule_interval(self.update, 1 / 60.)
 
+    def on_level(self, character, level):
+        if level:
+            level.bind(size=lambda *_: self.update_coords())
+
+    def on_coords(self, character, coords):
+        if not self.level:
+            return  # Not spawned
+        self.update_coords()
+
+    def update_coords(self):
+        coords = self.coords
+        tile = self.level.tile_at(*[int(i) for i in coords])
+        self.center = (
+            tile.x + (coords[0] - int(coords[0])) * tile.width,
+            tile.y + (coords[1] - int(coords[1])) * tile.height,
+        )
+
     def update_keys(self, state, keycode):
         if keycode in self.keymap:
-            reverse_trigger = self.keymap[keycode][0] == '-'
-            action = self.keymap[keycode][1:]
+            reverse_trigger = False
+            action = action_name = self.keymap[keycode]
+            if action.startswith(('+', '-')):
+                reverse_trigger = action[0] == '-'
+                action_name = action[1:]
             if state == 'down' or (state == 'up' and reverse_trigger):
-                if action not in self.current_actions:
-                    self.current_actions.append(action)
+                if action_name not in self.current_actions:
+                    self.current_actions.append(action_name)
             if state == 'up' or (state == 'down' and reverse_trigger):
-                if action in self.current_actions:
-                    self.current_actions.remove(action)
+                if action_name in self.current_actions:
+                    self.current_actions.remove(action_name)
 
     def update(self, dt):
         for action in self.current_actions[:]:
             if action == 'up':
-                self.y += self.movement_speed * dt
+                self.coord_y += self.movement_speed * self.scale * dt / 100.
             if action == 'down':
-                self.y -= self.movement_speed * dt
+                self.coord_y -= self.movement_speed * self.scale * dt / 100.
             if action == 'right':
-                self.x += self.movement_speed * dt
+                self.coord_x += self.movement_speed * self.scale * dt / 100.
             if action == 'left':
-                self.x -= self.movement_speed * dt
+                self.coord_x -= self.movement_speed * self.scale * dt / 100.
             if action == 'bomb':
                 self.current_actions.remove('bomb')
                 level = self.level
@@ -102,16 +128,18 @@ class Character(Widget):
 
     def update_collisions(self):
         level = self.level
-        try:
-            coords = level.coords(*self.center)
-        except ValueError:
-            return
+        radius = self.radius / 100.
 
         # Check map edges
-        self.x = max(self.x, level.x)
-        self.y = max(self.y, level.y)
-        self.right = min(self.right, level.right)
-        self.top = min(self.top, level.top)
+        for axis, coord in enumerate(self.coords):
+            min_axis, max_axis = (
+                radius,
+                level.map_size[axis] - radius,
+            )
+            self.coords[axis] = max(
+                min_axis,
+                min(max_axis, coord)
+            )
 
         # Evaluate the 8 neighboring tiles
         for nid, offset in enumerate((
@@ -119,7 +147,7 @@ class Character(Widget):
             (-1, +0),           (+1, +0),
             (-1, -1), (+0, -1), (+1, -1),
         )):
-            neighbor = [coords[i] + offset[i] for i in range(2)]
+            neighbor = [int(self.coords[i]) + offset[i] for i in range(2)]
             if(
                 neighbor[0] < 0 or neighbor[1] < 0 or
                 neighbor[0] >= level.map_size[0] or
@@ -129,44 +157,43 @@ class Character(Widget):
                 continue
             tile = level.tile_at(*neighbor)
             if level.collides(tile, self):
-                pos, size, center, tpos, tsize = (
-                    self.pos, self.size, self.center, tile.pos, tile.size
-                )
+                tcoords = tile.coords
+
                 # Check tile edges
-                for edge_pos, axis, target in (
-                    (tile.x, 0, 'right'),
-                    (tile.y, 1, 'top'),
-                    (tile.right, 0, 'x'),
-                    (tile.top, 1, 'y'),
-                ):
+                for axis, coord in enumerate(self.coords):
                     na = not axis
-                    if(
-                        pos[axis] < edge_pos < pos[axis] + size[axis] and
-                        tpos[na] <= center[na] <= tpos[na] + tsize[na]
-                    ):
-                        setattr(self, target, edge_pos)
+                    for side in (0, 1):
+                        if(
+                            coord - radius < tcoords[axis] + side < coord + radius and  # noqa
+                            tcoords[na] <= self.coords[na] <= tcoords[na] + 1
+                        ):
+                            self.coords[axis] = tcoords[axis] + side + (
+                                radius if side else -radius
+                            )
+
                 # Check tile corners
                 for corner, neighbors_offset in (
-                    ((tile.x, tile.y), ((-1, 0), (0, -1))),
-                    ((tile.x, tile.top), ((-1, 0), (0, 1))),
-                    ((tile.right, tile.y), ((1, 0), (0, -1))),
-                    ((tile.right, tile.top), ((1, 0), (0, 1))),
+                    ((tcoords[0], tcoords[1]), ((-1, 0), (0, -1))),
+                    ((tcoords[0] + 1, tcoords[1]), ((1, 0), (0, -1))),
+                    ((tcoords[0] + 1, tcoords[1] + 1), ((1, 0), (0, 1))),
+                    ((tcoords[0], tcoords[1] + 1), ((-1, 0), (0, 1))),
                 ):
-                    radius = math.hypot(*[
-                        center[i] - corner[i] for i in range(2)
+                    corner_dist = math.hypot(*[
+                        self.coords[i] - corner[i] for i in range(2)
                     ])
-                    if radius < self.radius and all([
-                        pos[i] < corner[i] < pos[i] + size[i] for i in range(2)
+                    if corner_dist < radius and all([
+                        coord - radius < corner[i] < coord + radius
+                        for i, coord in enumerate(self.coords)
                     ]) and not any([
                         level.collides(level.tile_at(
                             *[neighbor[i] + offset[i] for i in range(2)]
                         ), self) for offset in neighbors_offset
                     ]):
-                        ratio = self.radius / radius
-                        self.center = [
-                            corner[i] + sum(
-                                [offset[i] for offset in neighbors_offset]
-                            ) * abs(center[i] - corner[i]) * ratio
+                        ratio = radius / corner_dist
+                        self.coords = [
+                            corner[i] + sum([
+                                offset[i] for offset in neighbors_offset
+                            ]) * abs(self.coords[i] - corner[i]) * ratio
                             for i in range(2)
                         ]
 
