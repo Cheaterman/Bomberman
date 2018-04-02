@@ -73,18 +73,22 @@ class Character(Widget):
         )
 
     def update_keys(self, state, keycode):
+        app = App.get_running_app()
         if keycode in self.keymap:
             reverse_trigger = False
             action = action_name = self.keymap[keycode]
             if action.startswith(('+', '-')):
-                reverse_trigger = action[0] == '-'
+                if action[0] == '-':
+                    state = 'down' if state == 'up' else 'up'
                 action_name = action[1:]
-            if state == 'down' or (state == 'up' and reverse_trigger):
+            if state == 'down':
                 if action_name not in self.current_actions:
                     self.current_actions.append(action_name)
-            if state == 'up' or (state == 'down' and reverse_trigger):
+                    app.character.do(action.replace('-', '+'))
+            if state == 'up':
                 if action_name in self.current_actions:
                     self.current_actions.remove(action_name)
+                    app.character.do(action.replace('+', '-'))
 
     def update(self, dt):
         for action in self.current_actions[:]:

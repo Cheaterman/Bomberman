@@ -1,5 +1,33 @@
 #:import widgets widgets
 
-FloatLayout:
-    Level:
-        id: level
+ScreenManager:
+    Screen:
+        name: 'menu'
+
+        BoxLayout:
+            orientation: 'vertical'
+            pos_hint: {'center': (.5, .5)}
+            size_hint: .5, .8
+            spacing: dp(20)
+
+            TextInput:
+                hint_text: 'Username'
+                # XXX Don't commit me!        
+                text: u'Cheaterman'
+                on_text: app.username = self.text
+
+            TextInput:
+                id: address
+                # XXX Don't commit me!        
+                text: u'localhost:25000'
+                hint_text: 'Server address:port'
+
+            Button:
+                text: 'Connect!'
+                on_release: app.connect(address.text)
+
+    Screen:
+        name: 'game'
+
+        Level:
+            id: level
